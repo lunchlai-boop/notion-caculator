@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>提案費用計算器</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans TC", sans-serif;
+    font-size: 14px;
+    color: #37352f;
+    background: #fff;
+    padding: 24px 20px;
+    max-width: 680px;
+    margin: 0 auto;
+  }
+  h2 {
+    font-size: 16px;
+    font-weight: 600;
+    color: #37352f;
+    margin-bottom: 16px;
+  }
+  .summary-row {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+  }
+  .metric {
+    flex: 1;
+    min-width: 120px;
+    background: #f7f6f3;
+    border-radius: 8px;
+    padding: 10px 14px;
+  }
+  .metric-label {
+    font-size: 11px;
+    color: #9b9a97;
+    margin-bottom: 4px;
+  }
+  .metric-value {
+    font-size: 20px;
+    font-weight: 600;
+    color: #37352f;
+  }
+  .metric-sub {
+    font-size: 11px;
+    color: #b0aea8;
+    margin-top: 2px;
+  }
+  .section { margin-bottom: 28px; }
+  .section-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: #9b9a97;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 5px 10px;
+    background: #f7f6f3;
+    border-radius: 6px;
+    margin-bottom: 10px;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  th {
+    text-align: left;
+    padding: 7px 10px;
+    color: #9b9a97;
+    font-weight: 500;
+    border-bottom: 1px solid #e9e9e7;
+    background: #fafaf9;
+    font-size: 12px;
+  }
+  td {
+    padding: 5px 6px;
+    border-bottom: 1px solid #f0efec;
+    vertical-align: middle;
+  }
+  td:first-child {
+    padding-left: 10px;
+    color: #37352f;
+    font-size: 13px;
+    width: 30%;
+  }
+  td:nth-child(2), td:nth-child(3) { width: 25%; }
+  td:nth-child(4) { width: 20%; }
+  input[type=number] {
+    width: 100%;
+    padding: 5px 8px;
+    font-size: 13px;
+    border: 1px solid #e9e9e7;
+    border-radius: 5px;
+    background: #fff;
+    color: #37352f;
+    text-align: right;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  input[type=number]:focus { border-color: #2eaadc; }
+  input[type=number]::-webkit-inner-spin-button { opacity: 0.5; }
+  .total-cell {
+    font-weight: 500;
+    color: #37352f;
+    text-align: right;
+    padding-right: 10px;
+    font-size: 13px;
+  }
+  .grand-row td {
+    background: #f7f6f3;
+    font-weight: 600;
+    border-radius: 0;
+  }
+  .grand-row td:first-child { border-radius: 6px 0 0 6px; }
+  .grand-row td:last-child { border-radius: 0 6px 6px 0; }
+  .footer {
+    margin-top: 20px;
+    font-size: 11px;
+    color: #c4c3bd;
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+
+<div class="summary-row">
+  <div class="metric">
+    <div class="metric-label">總價（未稅）</div>
+    <div class="metric-value" id="total-ext">$0</div>
+    <div class="metric-sub">對外合計</div>
+  </div>
+  <div class="metric">
+    <div class="metric-label">總價（含稅 5%）</div>
+    <div class="metric-value" id="total-tax">$0</div>
+    <div class="metric-sub">未稅 × 1.05</div>
+  </div>
+  <div class="metric">
+    <div class="metric-label">對內總成本</div>
+    <div class="metric-value" id="total-int">$0</div>
+    <div class="metric-sub">對內合計</div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-title">對外細項</div>
+  <table>
+    <thead>
+      <tr>
+        <th>項目</th>
+        <th style="text-align:right">金額</th>
+        <th style="text-align:right">數量</th>
+        <th style="text-align:right;padding-right:10px">合計</th>
+      </tr>
+    </thead>
+    <tbody id="ext-body"></tbody>
+  </table>
+</div>
+
+<div class="section">
+  <div class="section-title">對內細項</div>
+  <table>
+    <thead>
+      <tr>
+        <th>項目</th>
+        <th style="text-align:right">金額</th>
+        <th style="text-align:right">數量</th>
+        <th style="text-align:right;padding-right:10px">合計</th>
+      </tr>
+    </thead>
+    <tbody id="int-body"></tbody>
+  </table>
+</div>
+
+<div class="footer">輸入金額與數量，合計自動計算</div>
+
+<script>
+const extItems = ['編排','統籌','帶隊','舞者演出','彩排費','排練費','服裝','教室租借','交通費'];
+const intItems = ['稅','編排','統籌','帶隊','舞者演出','彩排費','排練費','服裝','教室租借','交通費'];
+
+function createRow(name, prefix, idx) {
+  const tr = document.createElement('tr');
+  tr.innerHTML = `
+    <td>${name}</td>
+    <td><input type="number" id="${prefix}-price-${idx}" placeholder="0" min="0" step="1" oninput="calc()"></td>
+    <td><input type="number" id="${prefix}-qty-${idx}" placeholder="1" min="0" step="1" oninput="calc()"></td>
+    <td class="total-cell" id="${prefix}-total-${idx}">—</td>
+  `;
+  return tr;
+}
+
+function appendGrandRow(tbodyId, grandId) {
+  const tr = document.createElement('tr');
+  tr.className = 'grand-row';
+  tr.innerHTML = `<td colspan="3" style="padding:7px 10px;font-size:13px;">總金額</td><td class="total-cell" id="${grandId}">$0</td>`;
+  document.getElementById(tbodyId).appendChild(tr);
+}
+
+const extBody = document.getElementById('ext-body');
+extItems.forEach((n, i) => extBody.appendChild(createRow(n, 'ext', i)));
+appendGrandRow('ext-body', 'ext-grand');
+
+const intBody = document.getElementById('int-body');
+intItems.forEach((n, i) => intBody.appendChild(createRow(n, 'int', i)));
+appendGrandRow('int-body', 'int-grand');
+
+function fmt(n) {
+  return '$' + n.toLocaleString('zh-TW');
+}
+
+function calc() {
+  let extSum = 0;
+  extItems.forEach((_, i) => {
+    const p = parseFloat(document.getElementById('ext-price-' + i).value) || 0;
+    const q = parseFloat(document.getElementById('ext-qty-' + i).value) || 0;
+    const t = p * q;
+    document.getElementById('ext-total-' + i).textContent = (p || q) ? fmt(t) : '—';
+    extSum += t;
+  });
+
+  let intSum = 0;
+  intItems.forEach((_, i) => {
+    const p = parseFloat(document.getElementById('int-price-' + i).value) || 0;
+    const q = parseFloat(document.getElementById('int-qty-' + i).value) || 0;
+    const t = p * q;
+    document.getElementById('int-total-' + i).textContent = (p || q) ? fmt(t) : '—';
+    intSum += t;
+  });
+
+  document.getElementById('ext-grand').textContent = fmt(extSum);
+  document.getElementById('int-grand').textContent = fmt(intSum);
+  document.getElementById('total-ext').textContent = fmt(extSum);
+  document.getElementById('total-tax').textContent = fmt(Math.round(extSum * 1.05));
+  document.getElementById('total-int').textContent = fmt(intSum);
+}
+</script>
+</body>
+</html>
