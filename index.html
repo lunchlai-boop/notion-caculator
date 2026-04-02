@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>對內費用計算器</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans TC", sans-serif;
+    font-size: 14px;
+    color: #37352f;
+    background: #fff;
+    padding: 24px 20px;
+    max-width: 560px;
+    margin: 0 auto;
+  }
+  .summary-row {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 24px;
+  }
+  .metric {
+    flex: 1;
+    background: #f7f6f3;
+    border-radius: 8px;
+    padding: 12px 16px;
+  }
+  .metric-label {
+    font-size: 11px;
+    color: #9b9a97;
+    margin-bottom: 4px;
+  }
+  .metric-value {
+    font-size: 22px;
+    font-weight: 600;
+    color: #37352f;
+  }
+  .section-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: #9b9a97;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 5px 10px;
+    background: #f7f6f3;
+    border-radius: 6px;
+    margin-bottom: 10px;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  th {
+    text-align: left;
+    padding: 7px 10px;
+    color: #9b9a97;
+    font-weight: 500;
+    border-bottom: 1px solid #e9e9e7;
+    background: #fafaf9;
+    font-size: 12px;
+  }
+  td {
+    padding: 5px 6px;
+    border-bottom: 1px solid #f0efec;
+    vertical-align: middle;
+  }
+  td:first-child {
+    padding-left: 10px;
+    color: #37352f;
+    width: 32%;
+  }
+  td:nth-child(2), td:nth-child(3) { width: 26%; }
+  td:nth-child(4) { width: 16%; }
+  input[type=number] {
+    width: 100%;
+    padding: 5px 8px;
+    font-size: 13px;
+    border: 1px solid #e9e9e7;
+    border-radius: 5px;
+    background: #fff;
+    color: #37352f;
+    text-align: right;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  input[type=number]:focus { border-color: #2eaadc; }
+  input[type=number]::-webkit-inner-spin-button { opacity: 0.4; }
+  .total-cell {
+    font-weight: 500;
+    color: #37352f;
+    text-align: right;
+    padding-right: 10px;
+  }
+  .grand-row td {
+    background: #f7f6f3;
+    font-weight: 600;
+    border-top: 1px solid #e9e9e7;
+    border-bottom: none;
+  }
+  .footer {
+    margin-top: 16px;
+    font-size: 11px;
+    color: #c4c3bd;
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+
+<div class="summary-row">
+  <div class="metric">
+    <div class="metric-label">對內總金額</div>
+    <div class="metric-value" id="grand-display">$0</div>
+  </div>
+</div>
+
+<div class="section-title">對內細項</div>
+<table>
+  <thead>
+    <tr>
+      <th>項目</th>
+      <th style="text-align:right">金額</th>
+      <th style="text-align:right">數量</th>
+      <th style="text-align:right;padding-right:10px">合計</th>
+    </tr>
+  </thead>
+  <tbody id="int-body"></tbody>
+</table>
+
+<div class="footer">輸入金額與數量，合計自動計算</div>
+
+<script>
+const items = ['稅','編排','統籌','帶隊','舞者演出','彩排費','排練費','服裝','教室租借','交通費'];
+
+const tbody = document.getElementById('int-body');
+
+items.forEach((name, i) => {
+  const tr = document.createElement('tr');
+  tr.innerHTML = `
+    <td>${name}</td>
+    <td><input type="number" id="price-${i}" placeholder="0" min="0" step="1" oninput="calc()"></td>
+    <td><input type="number" id="qty-${i}" placeholder="1" min="0" step="1" oninput="calc()"></td>
+    <td class="total-cell" id="total-${i}">—</td>
+  `;
+  tbody.appendChild(tr);
+});
+
+const grandTr = document.createElement('tr');
+grandTr.className = 'grand-row';
+grandTr.innerHTML = `<td colspan="3" style="padding:8px 10px;">總金額</td><td class="total-cell" id="grand-cell">$0</td>`;
+tbody.appendChild(grandTr);
+
+function fmt(n) {
+  return '$' + n.toLocaleString('zh-TW');
+}
+
+function calc() {
+  let sum = 0;
+  items.forEach((_, i) => {
+    const p = parseFloat(document.getElementById('price-' + i).value) || 0;
+    const q = parseFloat(document.getElementById('qty-' + i).value) || 0;
+    const t = p * q;
+    document.getElementById('total-' + i).textContent = (p || q) ? fmt(t) : '—';
+    sum += t;
+  });
+  document.getElementById('grand-cell').textContent = fmt(sum);
+  document.getElementById('grand-display').textContent = fmt(sum);
+}
+</script>
+</body>
+</html>
